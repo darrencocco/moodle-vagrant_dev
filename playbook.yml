@@ -1,0 +1,131 @@
+---
+- hosts: all
+  become_user: root
+  become: yes
+
+  pre_tasks:
+    - name: define url
+      set_fact:
+        url: http://moodle.localdomain
+    - name: Setup sudoers
+      lineinfile:
+        path: /etc/sudoers.d/vagrant-nopasswd
+        regexp: vagrant.*
+        line: "vagrant ALL=(ALL) NOPASSWD: ALL"
+
+  tasks:
+  - name: Install packages
+    dnf:
+      name: "{{ item }}"
+    with_items:
+      - acl
+      - nginx
+      - postgresql-server
+      - postgresql
+      - python2-psycopg2
+      - php-fpm
+      - php-cli
+      - php-xml
+      - php-xmlrpc
+      - php-gd
+      - php-pgsql
+      - php-intl
+      - php-soap
+      - php-opcache
+      - php-mbstring
+      - php-pecl-zip
+      - php-pecl-xdebug
+      - "@lxde-desktop"
+      - tigervnc-server
+      - libselinux-python
+      
+  - name: Disable SELinux
+    selinux:
+      policy: targeted
+      state: permissive
+
+  - name: Disable firewall
+    service:
+      name: firewalld
+      enabled: no
+      state: stopped
+
+  - name: Disable xscreensaver
+    file:
+      path: /etc/xdg/lxsession/LXDE/autostart
+      state: absent
+
+  - name: Init database
+    command: postgresql-setup --initdb --unit postgresql
+
+  - name: Start database
+    service:
+      name: postgresql
+      enabled: yes
+      state: started
+
+  - name: Create database
+    become_user: postgres
+    postgresql_db:
+      name: moodle
+
+  - name: Create database user
+    become_user: postgres
+    postgresql_user:
+      name: apache
+      priv: ALL
+      db: moodle
+      role_attr_flags: LOGIN
+
+  - name: Add NGINX config
+    copy:
+      src: nginx.conf
+      dest: /etc/nginx/nginx.conf
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Enable Xdebug
+    blockinfile:
+      path: /etc/php.d/15-xdebug.ini
+      block: |
+        xdebug.auto_trace = 1
+        xdebug.collect_assignments = 1
+        xdebug.collect_includes = 1
+        xdebug.collect_params = 4
+        xdebug.collect_return = 1
+        xdebug.collect_vars = 1
+        xdebug.idekey = vagrant
+        xdebug.remote_autostart = 1
+        xdebug.remote_connect_back = 1
+
+  - name: Start web server
+    service:
+      name: nginx
+      enabled: yes
+      state: started
+
+  - name: Start PHP CGI
+    service:
+      name: php-fpm
+      enabled: yes
+      state: restarted
+
+  - name: Create Moodle data dir
+    file:
+      path: /var/www/moodledata
+      state: directory
+      owner: apache
+      group: apache
+      
+  - name: Create Behat Moodle data dir
+    file:
+      path: /var/www/behatdata
+      state: directory
+      owner: apache
+      group: apache
+
+  - name: Install config.php
+    template:
+      src: config.php.j2
+      dest: /vagrant/moodle/config.php
