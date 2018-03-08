@@ -73,6 +73,11 @@ Vagrant.configure("2") do |config|
     override.vm.synced_folder './', '/vagrant', type: 'sshfs'
   end
   config.vm.provider "virtualbox" do |lv, override|
+    config.vm.network "private_network", type: "dhcp"
+    config.hostmanager.ip_resolver = proc do |vm, resolving_vm|
+      # in virtualbox 0 is nat network
+      vm.provider.driver.read_guest_ip(1)
+    end
     override.vm.synced_folder './', '/vagrant', type: 'virtualbox'
   end
   
