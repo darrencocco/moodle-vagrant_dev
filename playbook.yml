@@ -38,7 +38,12 @@
       - "@lxde-desktop"
       - tigervnc-server
       - libselinux-python
-      
+
+  - name: Update packages
+    dnf:
+      name: "*"
+      state: latest
+
   - name: Disable SELinux
     selinux:
       policy: targeted
@@ -87,9 +92,9 @@
 
   - name: Enable Xdebug
     blockinfile:
-      path: /etc/php.d/15-xdebug.ini
+      path: /etc/php.d/16-xdebug-options.ini
+      create: yes
       block: |
-        xdebug.auto_trace = 1
         xdebug.collect_assignments = 1
         xdebug.collect_includes = 1
         xdebug.collect_params = 4

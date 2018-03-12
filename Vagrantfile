@@ -69,12 +69,22 @@ Vagrant.configure("2") do |config|
     config.vbguest.no_remote = true
   end
   
+  config.vm.provider "libvirt" do |lv|
+    lv.cpus = 4
+    lv.memory = 4096
+  end
+  
+  config.vm.provider "virtualbox" do |vb|
+    vb.cpus = 4
+    vb.memory = 4096
+  end
+  
   config.vm.provider "libvirt" do |lv, override|
     override.vm.synced_folder './', '/vagrant', type: 'sshfs'
   end
-  config.vm.provider "virtualbox" do |lv, override|
-    config.vm.network "private_network", type: "dhcp"
-    config.hostmanager.ip_resolver = proc do |vm, resolving_vm|
+  config.vm.provider "virtualbox" do |vb, override|
+    override.vm.network "private_network", type: "dhcp"
+    override.hostmanager.ip_resolver = proc do |vm, resolving_vm|
       # in virtualbox 0 is nat network
       vm.provider.driver.read_guest_ip(1)
     end
