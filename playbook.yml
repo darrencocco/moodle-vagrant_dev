@@ -6,12 +6,7 @@
   pre_tasks:
     - name: define url
       set_fact:
-        url: http://moodle.localdomain
-    - name: Setup sudoers
-      lineinfile:
-        path: /etc/sudoers.d/vagrant-nopasswd
-        regexp: vagrant.*
-        line: "vagrant ALL=(ALL) NOPASSWD: ALL"
+        url: http://{{ servername }}
 
   tasks:
   - name: Install packages
@@ -38,6 +33,7 @@
       - "@lxde-desktop"
       - tigervnc-server
       - libselinux-python
+      - php-simplesamlphp-saml2
 
   - name: Update packages
     dnf:
@@ -81,14 +77,62 @@
       priv: ALL
       db: moodle
       role_attr_flags: LOGIN
+  
+  - name: Increase NGINX types hash size
+    lineinfile:
+      path: /etc/nginx/nginx.conf
+      regexp: types_hash_max_size 2048;
+      line: types_hash_max_size 4096;
+      
+  - name: Install NGINX site configs
+    template:
+      src: site.conf.j2
+      dest: /etc/nginx/conf.d/{{ item.servername }}.conf
+    with_items:
+      - { servername: "{{ servername }}", htmldir: '/vagrant/moodle' }
+      - { servername: "saml.{{ servername }}", htmldir:  '/srv/simplesamlphp/www' }
+      
+  - name: Download SimpleSAML PHP
+    unarchive:
+      src: https://simplesamlphp.org/download?latest
+      dest: /srv/
+      remote_src: yes
+      list_files: yes
+    register: archive_contents
+    
+  - name: Link SimpleSAML PHP directory
+    file:
+      src: "{{ item.src }}"
+      path: "{{ item.path }}"
+      state: link
+    with_items:
+      - { src: "/srv/{{ archive_contents.files[0] }}", path: "/srv/simplesamlphp" }
+      - { src: "/srv/{{ archive_contents.files[0] }}/www", path: "/srv/{{ archive_contents.files[0] }}/www/simplesaml" }
+      
+  - name: Configure SimpleSAML
+    lineinfile:
+      path: /srv/simplesamlphp/config/config.php
+      regexp: "{{ item.find }}"
+      line: "{{ item.replace }}"
+    with_items:
+      - { find: "'auth.adminpassword' => '123'," , replace: "'auth.adminpassword' => 'Passw0rd!'," }
+      - { find: "'enable.saml20-idp' => false,", replace: "'enable.saml20-idp' => true," }
 
-  - name: Add NGINX config
+  - name: Add SAML metadata sources for SimpleSAML PHP
+    lineinfile:
+      path: /srv/simplesamlphp/config/config.php
+      line: "        array('type' => 'xml', 'url' =>  'http://{{ servername }}/auth/saml2/sp/metadata.php'),"
+      insertafter: "^\\s*array\\('type' => 'flatfile'\\),$"
+      
+  - name: Enable SimpleSAML example authentication
+    file:
+      path: /srv/simplesamlphp/modules/exampleauthenable
+      state: touch
+      
+  - name: Configure example authentication
     copy:
-      src: nginx.conf
-      dest: /etc/nginx/nginx.conf
-      owner: root
-      group: root
-      mode: 0644
+      src: authsources.php
+      dest: /srv/simplesamlphp/config/authsources.php
 
   - name: Enable Xdebug
     blockinfile:
@@ -135,3 +179,4 @@
     template:
       src: config.php.j2
       dest: /vagrant/moodle/config.php
+    
