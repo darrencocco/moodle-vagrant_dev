@@ -16,12 +16,13 @@ $CFG->dboptions = array (
   'dbport' => '',
   'dbsocket' => '/var/run/postgresql/',
 );
+$CFG->theme     = 'monasheass';
 
 $CFG->wwwroot   = '{{ url }}';
 $CFG->dataroot  = '/var/www/moodledata';
 $CFG->admin     = 'admin';
 
-$CFG->behat_wwwroot = 'http://127.0.0.1';
+$CFG->behat_wwwroot = '{{ behat_url }}';
 $CFG->behat_dataroot = '/var/www/behatdata';
 $CFG->behat_prefix = 'bht_';
 
