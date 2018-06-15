@@ -1,9 +1,8 @@
 servername = File.basename(Dir.getwd)
 fullname = "#{servername}.localdomain"
 
-Vagrant::DEFAULT_SERVER_URL.replace('https://vagrantcloud.com')
 Vagrant.configure("2") do |config|
-  config.vm.box = "fedora/27-cloud-base"
+  config.vm.box = "fedora/28-cloud-base"
 
   Vagrant::Config.run do |config|
     config.vbguest.auto_update = true

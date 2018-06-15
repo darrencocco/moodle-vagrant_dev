@@ -23,6 +23,7 @@
       - php-cli
       - php-xml
       - php-xmlrpc
+      - php-json
       - php-gd
       - php-pgsql
       - php-intl
@@ -32,10 +33,9 @@
       - php-pecl-zip
       - php-pecl-xdebug
       - "@lxde-desktop"
-      - tigervnc-server
+      - "@base-x"
       - java-openjdk
       - libselinux-python
-      - php-simplesamlphp-saml2
 
   - name: Update packages
     dnf:
@@ -47,12 +47,6 @@
       policy: targeted
       state: permissive
 
-  - name: Disable firewall
-    service:
-      name: firewalld
-      enabled: no
-      state: stopped
-
   - name: Disable xscreensaver
     file:
       path: /etc/xdg/lxsession/LXDE/autostart
@@ -60,7 +54,9 @@
 
   - name: Init database
     command: postgresql-setup --initdb --unit postgresql
-
+    args:
+      creates: /var/lib/pgsql/data/postgresql.conf
+    
   - name: Start database
     service:
       name: postgresql
@@ -83,8 +79,14 @@
   - name: Increase NGINX types hash size
     lineinfile:
       path: /etc/nginx/nginx.conf
-      regexp: types_hash_max_size 2048;
-      line: types_hash_max_size 4096;
+      regexp: "types_hash_max_size.*;"
+      line: "types_hash_max_size 4096;"
+      
+  - name: Increase NGINX upload size
+    lineinfile:
+      path: /etc/nginx/nginx.conf
+      line: "client_max_body_size 100M;"
+      insertafter: ".*types_hash_max_size.*"
       
   - name: Install NGINX site configs
     template:
@@ -129,13 +131,27 @@
       
   - name: Enable SimpleSAML example authentication
     file:
-      path: /srv/simplesamlphp/modules/exampleauthenable
+      path: /srv/simplesamlphp/modules/exampleauth/enable
       state: touch
       
   - name: Configure example authentication
     copy:
       src: authsources.php
       dest: /srv/simplesamlphp/config/authsources.php
+  
+  - name: Generate locally signed SAML cert
+    command: openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out server.crt -keyout server.pem -subj "/C=NA/ST=NA/L=NA/O=NA/CN=www.example.com"
+    args:
+      chdir: /srv/simplesamlphp/cert
+      creates: /srv/simplesamlphp/cert/server.crt
+
+  - name: Set ownership of SAML cert to PHP-FPM
+    file:
+      owner: apache
+      path: "{{ item }}"
+    with_items:
+      - /srv/simplesamlphp/cert/server.crt
+      - /srv/simplesamlphp/cert/server.pem
 
   - name: Enable Xdebug
     blockinfile:
@@ -189,9 +205,15 @@
       src: /opt/firefox/firefox
       path: /usr/local/sbin/firefox
       state: link
+  
+  - name: Install Selenium Server 2.53.1
+    get_url:
+      url: https://selenium-release.storage.googleapis.com/2.53/selenium-server-standalone-2.53.1.jar
+      owner: vagrant
+      group: vagrant
+      dest: /opt/selenium
 
   - name: Install config.php
     template:
       src: config.php.j2
       dest: /vagrant/moodle/config.php
-    
