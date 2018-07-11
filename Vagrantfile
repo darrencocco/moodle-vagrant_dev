@@ -3,16 +3,11 @@ fullname = "#{servername}.localdomain"
 
 Vagrant.configure("2") do |config|
   config.vm.box = "fedora/28-cloud-base"
-
-  Vagrant::Config.run do |config|
-    config.vbguest.auto_update = true
-    config.vbguest.no_remote = true
-  end
   
   config.vm.provider "libvirt" do |lv, override|
     lv.cpus = 4
     lv.memory = 4096
-    override.vm.synced_folder './', '/vagrant', type: 'sshfs'
+    override.vm.synced_folder './', '/vagrant', type: 'sshfs', ssh_opts_append: '-o ServerAliveInterval=15'
   end
   config.vm.provider "virtualbox" do |vb, override|
     vb.cpus = 4
@@ -33,6 +28,9 @@ Vagrant.configure("2") do |config|
   config.vm.define "#{servername}" do |node|
     node.hostmanager.aliases = ["#{fullname}", "saml.#{fullname}", "behat.#{fullname}"]
   end
+  
+  config.ssh.forward_agent = true
+  config.ssh.forward_x11 = true
   
   config.vm.provision "ansible_local" do |ansible|
     ansible.playbook = "playbook.yml"

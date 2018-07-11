@@ -36,6 +36,7 @@
       - "@base-x"
       - java-openjdk
       - libselinux-python
+      - virtualbox-guest-additions
 
   - name: Update packages
     dnf:
@@ -46,6 +47,12 @@
     selinux:
       policy: targeted
       state: permissive
+
+  - name: Enable Virtualbox Guest Additions
+    service: 
+      name: vboxservice
+      enabled: yes
+      state: started
 
   - name: Disable xscreensaver
     file:
@@ -217,3 +224,23 @@
     template:
       src: config.php.j2
       dest: /vagrant/moodle/config.php
+
+  - name: Add apache user to vagrant group
+    user:
+      name: apache
+      groups: vagrant
+      append: yes
+
+  - name: Open up vagrant home directory to group
+    file:
+      path: /home/vagrant
+      state: directory
+      mode: 0770
+  
+  - name: Create sudo_php script for CLI
+    copy:
+      src: sudo_php
+      dest: /usr/sbin/sudo_php
+      owner: root
+      group: root
+      mode:  0755
