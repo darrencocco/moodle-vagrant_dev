@@ -235,7 +235,7 @@
     file:
       path: /home/vagrant
       state: directory
-      mode: 0770
+      mode: 0750
   
   - name: Create sudo_php script for CLI
     copy:
