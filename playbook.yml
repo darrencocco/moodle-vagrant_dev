@@ -187,6 +187,12 @@
       enabled: yes
       state: restarted
 
+  - name: Disable firewall
+    service:
+      name: firewalld
+      enabled: no
+      state: stopped
+
   - name: Create Moodle data dir
     file:
       path: /var/www/moodledata

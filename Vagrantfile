@@ -7,7 +7,11 @@ Vagrant.configure("2") do |config|
   config.vm.provider "libvirt" do |lv, override|
     lv.cpus = 4
     lv.memory = 4096
-    override.vm.synced_folder './', '/vagrant', type: 'sshfs', ssh_opts_append: '-o ServerAliveInterval=15'
+    override.vm.synced_folder './', '/vagrant',
+            type: 'nfs',
+            nfs_version: 4,
+            nfs_udp: false,
+            linux__nfs_options: ['rw','no_subtree_check','no_root_squash','all_squash']
   end
   config.vm.provider "virtualbox" do |vb, override|
     vb.cpus = 4
