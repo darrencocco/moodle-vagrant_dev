@@ -18,10 +18,18 @@ Requirements:
  * vagrant
  * vagrant-hostmanager
 
+#### Ubuntu
+Install the following packages in addition to vagrant requirements:
+ * nfs-kernel-server
+ * firewalld
+
+#### All
 Steps:
  1. (Insert distro specific stuff here)
- 2. Replace nfs_client.rb in plugins/guests/redhat/cap/nfs_client.rb
- 3. vagrant up
+ 2. Add the appropriate vagrant-syncedfolders file to /etc/sudo.d/ for your distro
+ 3. Run additional_files/firewall.sh as root
+ 4. Replace nfs_client.rb in plugins/guests/redhat/cap/nfs_client.rb
+ 5. vagrant up
  
 ### Windows
 Requirements:
