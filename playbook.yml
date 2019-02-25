@@ -74,6 +74,20 @@
     args:
       creates: /var/lib/pgsql/data/postgresql.conf
 
+  - name: Configure DataGrip access
+    lineinfile:
+      path: /var/lib/pgsql/data/postgresql.conf
+      insertafter: "#listen_addresses = 'localhost'"
+      line: "listen_addresses = '*'"
+  - blockinfile:
+      path: /var/lib/pgsql/data/pg_hba.conf
+      insertafter: 'local\s+all\s+all\s+peer'
+      block: |
+        # IPv4 connections from host
+        host    all             all             10.0.0.0/8              trust
+        host    all             all             172.16.0.0/12           trust
+        host    all             all             192.168.0.0/16          trust
+
   - name: Start database
     service:
       name: postgresql
