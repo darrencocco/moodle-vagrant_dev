@@ -2,8 +2,8 @@ servername = File.basename(Dir.getwd)
 fullname = "#{servername}.localdomain"
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "fedora/28-cloud-base"
-  
+  config.vm.box = "fedora/29-cloud-base"
+
   config.vm.provider "libvirt" do |lv, override|
     lv.cpus = 4
     lv.memory = 4096
@@ -23,23 +23,26 @@ Vagrant.configure("2") do |config|
     end
     override.vm.synced_folder './', '/vagrant', type: 'virtualbox'
   end
-  
+
   config.hostmanager.enabled = true
   config.hostmanager.manage_host = true
   config.hostmanager.manage_guest = true
   config.hostmanager.ignore_private_ip = false
   config.hostmanager.include_offline = false
   config.vm.define "#{servername}" do |node|
-    node.hostmanager.aliases = ["#{fullname}", "saml.#{fullname}", "behat.#{fullname}"]
+    node.hostmanager.aliases = ["#{fullname}", "saml.#{fullname}", "behat.#{fullname}", "mail.#{fullname}"]
   end
-  
+
   config.ssh.forward_agent = true
   config.ssh.forward_x11 = true
-  
+
   config.vm.provision "ansible_local" do |ansible|
     ansible.playbook = "playbook.yml"
     ansible.extra_vars = {
       servername: "#{fullname}"
+    }
+    ansible.host_vars = {
+      "#{servername}" => {"ansible_python_interpreter" => "/usr/bin/python3"}
     }
   end
 end

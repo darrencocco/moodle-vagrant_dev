@@ -12,31 +12,36 @@
   tasks:
   - name: Install packages
     dnf:
-      name: "{{ item }}"
-    with_items:
-      - acl
-      - nginx
-      - postgresql-server
-      - postgresql
-      - python2-psycopg2
-      - php-fpm
-      - php-cli
-      - php-xml
-      - php-xmlrpc
-      - php-json
-      - php-gd
-      - php-pgsql
-      - php-intl
-      - php-soap
-      - php-opcache
-      - php-mbstring
-      - php-pecl-zip
-      - php-pecl-xdebug
-      - "@lxde-desktop"
-      - "@base-x"
-      - java-openjdk
-      - libselinux-python
-      - virtualbox-guest-additions
+      name:
+        - acl
+        - nginx
+        - postgresql-server
+        - postgresql
+        - python3-psycopg2
+        - php-fpm
+        - php-cli
+        - php-xml
+        - php-xmlrpc
+        - php-json
+        - php-gd
+        - php-pgsql
+        - php-intl
+        - php-soap
+        - php-opcache
+        - php-mbstring
+        - php-pecl-zip
+        - php-pecl-xdebug
+        - ruby
+        - ruby-devel
+        - openssl-devel
+        - sqlite-devel
+        - redhat-rpm-config
+        - "@C Development Tools and Libraries"
+        - "@lxde-desktop"
+        - "@base-x"
+        - java-openjdk
+        - libselinux-python
+        - virtualbox-guest-additions
 
   - name: Update packages
     dnf:
@@ -46,10 +51,15 @@
   - name: Disable SELinux
     selinux:
       policy: targeted
-      state: permissive
+      state: disabled
+
+  - name: Install config.php
+    template:
+      src: config.php.j2
+      dest: /vagrant/moodle/config.php
 
   - name: Enable Virtualbox Guest Additions
-    service: 
+    service:
       name: vboxservice
       enabled: yes
       state: started
@@ -63,7 +73,7 @@
     command: postgresql-setup --initdb --unit postgresql
     args:
       creates: /var/lib/pgsql/data/postgresql.conf
-    
+
   - name: Start database
     service:
       name: postgresql
@@ -82,19 +92,19 @@
       priv: ALL
       db: moodle
       role_attr_flags: LOGIN
-  
+
   - name: Increase NGINX types hash size
     lineinfile:
       path: /etc/nginx/nginx.conf
       regexp: "types_hash_max_size.*;"
       line: "types_hash_max_size 4096;"
-      
+
   - name: Increase NGINX upload size
     lineinfile:
       path: /etc/nginx/nginx.conf
       line: "client_max_body_size 100M;"
       insertafter: ".*types_hash_max_size.*"
-      
+
   - name: Install NGINX site configs
     template:
       src: site.conf.j2
@@ -103,7 +113,7 @@
       - { servername: "{{ servername }}", htmldir: '/vagrant/moodle' }
       - { servername: "behat.{{ servername }}", htmldir: '/vagrant/moodle' }
       - { servername: "saml.{{ servername }}", htmldir:  '/srv/simplesamlphp/www' }
-      
+
   - name: Download SimpleSAML PHP
     unarchive:
       src: https://simplesamlphp.org/download?latest
@@ -111,7 +121,7 @@
       remote_src: yes
       list_files: yes
     register: archive_contents
-    
+
   - name: Link SimpleSAML PHP directory
     file:
       src: "{{ item.src }}"
@@ -120,7 +130,7 @@
     with_items:
       - { src: "/srv/{{ archive_contents.files[0] }}", path: "/srv/simplesamlphp" }
       - { src: "/srv/{{ archive_contents.files[0] }}/www", path: "/srv/{{ archive_contents.files[0] }}/www/simplesaml" }
-      
+
   - name: Configure SimpleSAML
     lineinfile:
       path: /srv/simplesamlphp/config/config.php
@@ -135,17 +145,17 @@
       path: /srv/simplesamlphp/config/config.php
       line: "        array('type' => 'xml', 'url' =>  'http://{{ servername }}/auth/saml2/sp/metadata.php'),"
       insertafter: "^\\s*array\\('type' => 'flatfile'\\),$"
-      
+
   - name: Enable SimpleSAML example authentication
     file:
       path: /srv/simplesamlphp/modules/exampleauth/enable
       state: touch
-      
+
   - name: Configure example authentication
     copy:
       src: authsources.php
       dest: /srv/simplesamlphp/config/authsources.php
-  
+
   - name: Generate locally signed SAML cert
     command: openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out server.crt -keyout server.pem -subj "/C=NA/ST=NA/L=NA/O=NA/CN=www.example.com"
     args:
@@ -199,13 +209,43 @@
       state: directory
       owner: apache
       group: apache
-      
+
   - name: Create Behat Moodle data dir
     file:
       path: /var/www/behatdata
       state: directory
       owner: apache
       group: apache
+
+  - name: Install MailCatcher
+    gem:
+      name: mailcatcher
+      state: latest
+      user_install: no
+
+  - name: Install MailCatcher service
+    copy:
+      src: mailcatcher.service
+      dest: /etc/systemd/system/mailcatcher.service
+      owner: root
+      group: root
+      mode:  0755
+
+  - name: Enable MailCatcher service
+    service:
+      name: mailcatcher
+      enabled: yes
+      state: started
+
+  - name: Expose MailCatcher web interface
+    template:
+      src: reverse_proxy.conf.j2
+      dest: /etc/nginx/conf.d/{{ item.servername }}.conf
+    with_items:
+      - { servername: "mail.{{ servername }}", proxy_destination: 'http://127.0.0.1:1080' }
+  - service:
+      name: nginx
+      state: restarted
 
   - name: Install Firefox 47.0.1
     unarchive:
@@ -218,18 +258,13 @@
       src: /opt/firefox/firefox
       path: /usr/local/sbin/firefox
       state: link
-  
+
   - name: Install Selenium Server 2.53.1
     get_url:
       url: https://selenium-release.storage.googleapis.com/2.53/selenium-server-standalone-2.53.1.jar
       owner: vagrant
       group: vagrant
       dest: /opt/selenium
-
-  - name: Install config.php
-    template:
-      src: config.php.j2
-      dest: /vagrant/moodle/config.php
 
   - name: Add apache user to vagrant group
     user:
@@ -242,7 +277,15 @@
       path: /home/vagrant
       state: directory
       mode: 0750
-  
+
+  - name: Set group ACL defaults for vagrant home directory
+    acl:
+      path: /home/vagrant
+      default: yes
+      etype: group
+      permissions: rwx
+      state: present
+
   - name: Create sudo_php script for CLI
     copy:
       src: sudo_php

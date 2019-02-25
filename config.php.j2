@@ -29,6 +29,19 @@ $CFG->behat_prefix = 'bht_';
 
 $CFG->directorypermissions = 0777;
 
+$CFG->smtphosts = '127.0.0.1:1025'
+
+if (true) {
+  // Force a debugging mode regardless the settings in the site administration
+  @error_reporting(E_ALL | E_STRICT); // NOT FOR PRODUCTION SERVERS!
+  @ini_set('display_errors', '1');    // NOT FOR PRODUCTION SERVERS!
+  $CFG->debug = (E_ALL | E_STRICT);   // === DEBUG_DEVELOPER - NOT FOR PRODUCTION SERVERS!
+  $CFG->debugdisplay = 1;             // NOT FOR PRODUCTION SERVERS!
+  // Allow any type of password
+  $CFG->passwordpolicy = false;
+  $CFG->cachejs = false;
+}
+
 require_once(dirname(__FILE__) . '/lib/setup.php');
 
 // There is no php closing tag in this file,
