@@ -45,4 +45,7 @@ Vagrant.configure("2") do |config|
       "#{servername}" => {"ansible_python_interpreter" => "/usr/bin/python3"}
     }
   end
+  config.trigger.before :destroy do |trigger|
+    trigger.run_remote = {inline: "moodle_archive"}
+  end
 end

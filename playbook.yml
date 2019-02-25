@@ -293,3 +293,11 @@
       owner: root
       group: root
       mode:  0755
+
+  - name: Create archive_moodle script for CLI
+    copy:
+      src: moodle_archive
+      dest: /usr/local/sbin/moodle_archive
+      owner: root
+      group: root
+      mode:  0755
