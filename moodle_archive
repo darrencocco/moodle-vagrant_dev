@@ -8,6 +8,6 @@ su -c 'pg_dump moodle' postgres > $SAVELOCATION/moodle.sql
 
 cp -r /var/www/moodledata $SAVELOCATION/
 
-tar -czf $SAVELOCATION.tar.gz $SAVELOCATION
+tar -c -I pigz -f $SAVELOCATION.tar.gz $SAVELOCATION
 
 rm -rf $SAVELOCATION
