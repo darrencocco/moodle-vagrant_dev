@@ -31,6 +31,10 @@ $CFG->directorypermissions = 0777;
 
 $CFG->smtphosts = '127.0.0.1:1025';
 
+$CFG->custom_context_classes = [
+   90 => 'local_questionbank\context'
+];
+
 if (true) {
   // Force a debugging mode regardless the settings in the site administration
   @error_reporting(E_ALL | E_STRICT); // NOT FOR PRODUCTION SERVERS!
