@@ -233,6 +233,13 @@
       owner: apache
       group: apache
 
+  - name: Create PHPUnit Moodle data dir
+    file:
+      path: /var/www/phpudata
+      state: directory
+      owner: apache
+      group: apache
+
   - name: Install MailCatcher
     gem:
       name: mailcatcher
